@@ -14,28 +14,38 @@ async def executeKick():
 
         try:
             data = q.get()
-            member = data[0]
+            members = data[0]
             message_channel = data[1]
-            if not member.voice.voice_channel:
-                await client.send_message(message_channel, member.name + " isn't in a voice channel")
-                continue
+            created = False
+            voice_members = []
 
-            channel = await client.create_channel(member.server, "kicked", type=discord.ChannelType.voice)
-            await client.move_member(member, channel)
-            voice = await client.join_voice_channel(channel)
-            player = voice.create_ffmpeg_player('sound.mp3')
-            player.start()
+            for member in members:
+                if not member.voice.voice_channel:
+                    await client.send_message(message_channel, member.name + " isn't in a voice channel")
+                    continue
+                    
+                if not created:
+                        channel = await client.create_channel(member.server, "kicked", type=discord.ChannelType.voice)
+                        voice = await client.join_voice_channel(channel)
+                        player = voice.create_ffmpeg_player('sound.mp3')
+                        created = True
 
-            count = 0
-            length = 3
+                voice_members.append(member)
+                await client.move_member(member, channel)
+            
+            if created:
+                player.start()
 
-            while count < length:
-                await asyncio.sleep(1)
-                count += 1
-            player.stop()
-            await voice.disconnect()
-            await client.delete_channel(channel)
-            await client.send_message(message_channel, "Kicked " + member.name)
+                count = 0
+                length = 3
+
+                while count < length:
+                    await asyncio.sleep(1)
+                    count += 1
+                player.stop()
+                await voice.disconnect()
+                await client.delete_channel(channel)
+                await client.send_message(message_channel, "Kicked " + ', '.join(member.name for member in voice_members))
         except discord.Forbidden:
             print("Bot does not have required permissions")
             return
@@ -53,9 +63,7 @@ async def on_message(message):
             await client.send_message(message.channel, "You didn't specify any users")
             return
         
-        for member in message.mentions:
-            print("added " + member.name + " to q")
-            q.put((member, message.channel))
+        q.put((message.mentions, message.channel))
             
             
 @client.event
