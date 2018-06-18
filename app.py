@@ -69,6 +69,7 @@ async def kick(ctx):
 @client.command(name='kickchannel', aliases=['kickc'], pass_context=True)
 async def kick_channel(ctx, arg):
     channel = discord.utils.get(ctx.message.server.channels, name=arg, type=discord.ChannelType.voice)
+    print(channel.voice_members)
     if not channel:
         await client.say("Could not find a channel with the name " + arg)
         return
@@ -77,6 +78,19 @@ async def kick_channel(ctx, arg):
         return
 
     q.put((channel.voice_members, ctx.message.channel))
+
+@client.command(name='kickall', aliases=['kicka'], pass_context=True)
+async def kick_all(ctx):
+    all_members = []
+    for channel in ctx.message.server.channels:
+        for member in channel.voice_members:
+            all_members.append(member)
+
+    if not all_members:
+        await client.say("Nobody is in voice chat.")
+        return
+
+    q.put((all_members, ctx.message.channel))
 
 @client.event
 async def on_command_error(error, ctx):
